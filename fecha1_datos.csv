@@ -1,0 +1,17 @@
+Unnamed: 0,Unnamed: 1,Unnamed: 2,Valores por rendimiento,Unnamed: 4,Unnamed: 5,Unnamed: 6,Unnamed: 7,Unnamed: 8,Unnamed: 9,Unnamed: 10,Unnamed: 11,Unnamed: 12,Unnamed: 13,Unnamed: 14,Unnamed: 15,Unnamed: 16,Unnamed: 17,Unnamed: 18,Unnamed: 19,Unnamed: 20,Unnamed: 21,Unnamed: 22,Unnamed: 23,Unnamed: 24,Unnamed: 25,Unnamed: 26,Unnamed: 27,Unnamed: 28,Unnamed: 29,Unnamed: 30,Unnamed: 31,Unnamed: 32,Unnamed: 33,Unnamed: 34,Unnamed: 35
+,2025-08-03 00:00:00,,Fecha 1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,Ranking,Jugador,Chateau,,,,Centro Alpino,,,,Ciudad Destruida,,,,Patio Maniobras,,,,Saint Reymonds,,,,Zona Aterrizaje,,,,TOTAL,,Mejor Mapa,Peor Mapa,,,,,
+,,,Rendimiento,Bajas,Muertes,Ratio,Rendimiento,Bajas,Muertes,Ratio,Rendimiento,Bajas,Muertes,Ratio,Rendimiento,Bajas,Muertes,Ratio,Rendimiento,Bajas,Muertes,Ratio,Rendimiento,Bajas,Muertes,Ratio,,,,,,Jugador,Total Bajas,Total Muertes,Promedio Ratio
+,1er ,Fer,1585,25,11,2.272727272727273,710,10,9,1.1111111111111112,910,13,8,1.625,1725,23,9,2.5555555555555554,1170,21,13,1.6153846153846154,1075,15,8,1.875,7175,,Patio Maniobras,Centro Alpino,,Fer,107,58,1.8448275862068966
+,2do,Arturo,0,11,15,0.7333333333333333,510,5,3,1.6666666666666667,1090,12,7,1.7142857142857142,910,11,3,3.6666666666666665,930,12,10,1.2,755,14,10,1.4,4195,,Ciudad Destruida,Chateau,,Arturo,65,48,1.3541666666666667
+,3ro,Pipe,0,5,10,0.5,1195,11,4,2.75,1035,10,8,1.25,695,13,13,1,120,4,11,0.36363636363636365,805,5,6,0.8333333333333334,3850,,Centro Alpino,Chateau,,Edson,48,52,0.9230769230769231
+,4to,Oscar,870,21,12,1.75,245,13,12,1.0833333333333333,890,15,10,1.5,0,10,12,0.8333333333333334,610,20,14,1.4285714285714286,1090,17,9,1.8888888888888888,3705,,Zona Aterrizaje,Patio Maniobras,,Oscar,96,69,1.391304347826087
+,5to,Brandon,350,11,13,0.8461538461538461,140,3,8,0.375,0,3,10,0.3,380,8,10,0.8,435,13,10,1.3,40,5,11,0.45454545454545453,1345,,Saint Reymonds,Ciudad Destruida,,Brandon,43,62,0.6935483870967742
+,6to,Edson,245,9,12,0.75,460,6,6,1,75,6,7,0.8571428571428571,65,8,11,0.7272727272727273,50,7,12,0.5833333333333334,280,6,8,0.75,1175,,Centro Alpino,Saint Reymonds,,Kari,42,56,0.75
+,7mo,Kari,5,6,12,0.5,130,5,6,0.8333333333333334,190,8,8,1,0,2,7,0.2857142857142857,140,10,10,1,245,8,7,1.1428571428571428,710,,Zona Aterrizaje,Patio Maniobras,,Pipe,39,50,0.78
+,8vo,Juanito,0,10,13,0.7692307692307693,70,6,11,0.5454545454545454,105,8,18,0.4444444444444444,80,4,17,0.23529411764705882,0,6,14,0.42857142857142855,0,7,18,0.3888888888888889,255,,Ciudad Destruida,Chateau,,Juanito,41,91,0.45054945054945056
+,9vo,Pablo,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,-,-,,Pablo,0,0,0
+,9vo,Carlos,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,-,-,,Carlos,0,0,0
+,9vo,Tammer,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,,-,-,,Tammer,0,0,0
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,Mejor Jugador x Mapa,,Fer,,,,Pipe,,,,Arturo,,,,Fer,,,,Fer,,,,Oscar,,,,,,,,,,,,
