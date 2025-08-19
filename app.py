@@ -76,7 +76,7 @@ try:
     rank_total.insert(0, "Posición", rank_total.index + 1)
 
     # Formateo
-    rank_total_fmt = rank_total[["Posición", "Jugador", "Fechas_jugadas","Bajas_total","Muertes_total", "Ratio","Rendimiento_total", "Promedio", "Mapas (Mejor | Peor)"]].copy()
+    rank_total_fmt = rank_total[["Posición", "Jugador", "Fechas_jugadas","Bajas_total","Muertes_total", "Ratio","Rendimiento_total", "Rendimiento Promedio", "Mapas (Mejor | Peor)"]].copy()
     rank_total_fmt["Rendimiento_total"] = rank_total_fmt["Rendimiento_total"].map("{:,.0f}".format)
     rank_total_fmt["Promedio"] = rank_total_fmt["Promedio"].map("{:,.0f}".format)
     rank_total_fmt["Ratio"] = rank_total_fmt["Ratio"].map("{:,.2f}".format)
