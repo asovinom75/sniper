@@ -39,7 +39,7 @@ try:
         )
         .reset_index()
     )
-    resumen["Promedio"] = resumen["Rendimiento_total"] / resumen["Fechas_jugadas"]
+    resumen["Rendimiento Promedio"] = resumen["Rendimiento_total"] / resumen["Fechas_jugadas"]
     resumen["Ratio"] = resumen["Bajas_total"] / resumen["Muertes_total"]
     
     # Mejor mapa acumulada
