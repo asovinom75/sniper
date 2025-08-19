@@ -3,7 +3,7 @@ import pandas as pd
 
 st.set_page_config(page_title="Ranking Campeonato", layout="wide")
 
-st.title("📊 Campeonato Sniper Elite 6 – Consolidado por Jugador")
+st.title("📊 Campeonato Sniper Elite Resistencia – Consolidado por Jugador")
 
 # Carga automática del archivo (asumiendo que se llama 'campeonato.xlsx' y está en el mismo directorio)
 archivo = "Estadiscticas Campeonato interno Sniper Elite 6_ver2.xlsx"
