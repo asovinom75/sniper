@@ -5,7 +5,7 @@ st.set_page_config(page_title="Ranking Campeonato", layout="wide")
 
 st.title("📊 Campeonato Sniper Elite Resistencia – Consolidado por Jugador")
 
-# Carga automática del archivo (asumiendo que se llama 'campeonato.xlsx' y está en el mismo directorio)
+# Carga automática del archivo (asumiendo que se llama 'Estadiscticas Campeonato interno Sniper Elite 6_ver2.xlsx' y está en el mismo directorio)
 archivo = "Estadiscticas Campeonato interno Sniper Elite 6_ver2.xlsx"
 
 # Verificar si el archivo existe
