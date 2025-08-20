@@ -69,7 +69,7 @@ try:
     # Formateo
     rank_total_fmt = rank_total[["Posición", "Jugador", "Fechas_jugadas","Bajas_total","Muertes_total", "Ratio","Rendimiento_total", "Promedio", "Mapas (Mejor | Peor)"]].copy()
     rank_total_fmt["Rendimiento_total"] = rank_total_fmt["Rendimiento_total"].map("{:,.0f}".format).str.replace(",", ".")
-    rank_total_fmt["Promedio"] = rank_total_fmt["Promedio"].map("{:,.2f}".format).str.replace(",", ".")
+    rank_total_fmt["Promedio"] = rank_total_fmt["Promedio"].map("{:,.0f}".format).str.replace(",", ".")
     rank_total_fmt["Ratio"] = rank_total_fmt["Ratio"].map("{:,.2f}".format).str.replace(",", ".")
     rank_total_fmt["Bajas_total"] = rank_total_fmt["Bajas_total"].map("{:,.0f}".format).str.replace(",", ".")
     rank_total_fmt["Muertes_total"] = rank_total_fmt["Muertes_total"].map("{:,.0f}".format).str.replace(",", ".")
@@ -95,7 +95,7 @@ try:
     dfB = pd.DataFrame(equipoB)[["Jugador", "Promedio"]]
 
     for df_equipo in [dfA, dfB]:
-        df_equipo["Promedio"] = df_equipo["Promedio"].map("{:,.2f}".format).str.replace(",", ".")
+        df_equipo["Promedio"] = df_equipo["Promedio"].map("{:,.0f}".format).str.replace(",", ".")
 
     st.subheader("⚖️ Equipos Balanceados (por promedio)")
 
@@ -103,11 +103,11 @@ try:
     with col1:
         st.markdown("### Equipo A")
         st.dataframe(dfA, use_container_width=True)
-        st.markdown(f"**TOTAL Promedio: {promA:,.2f}**".replace(",", "."))
+        st.markdown(f"**TOTAL Promedio: {promA:,.0f}**".replace(",", "."))
     with col2:
         st.markdown("### Equipo B")
         st.dataframe(dfB, use_container_width=True)
-        st.markdown(f"**TOTAL Promedio: {promB:,.2f}**".replace(",", "."))
+        st.markdown(f"**TOTAL Promedio: {promB:,.0f}**".replace(",", "."))
 
     # --- Estadísticas por Jugador y Fecha ---
     st.subheader("🌍 Estadísticas por Jugador y Fecha (Mejor y Peor Mapa)")
@@ -156,7 +156,7 @@ try:
 
         # Formateo
         mapa_fecha["Rendimiento_total"] = mapa_fecha["Rendimiento_total"].map("{:,.0f}".format).str.replace(",", ".")
-        mapa_fecha["Promedio"] = mapa_fecha["Promedio"].map("{:,.2f}".format).str.replace(",", ".")
+        mapa_fecha["Promedio"] = mapa_fecha["Promedio"].map("{:,.0f}".format).str.replace(",", ".")
         mapa_fecha["Bajas_total"] = mapa_fecha["Bajas_total"].map("{:,.0f}".format).str.replace(",", ".")
         mapa_fecha["Muertes_total"] = mapa_fecha["Muertes_total"].map("{:,.0f}".format).str.replace(",", ".")
 
