@@ -78,6 +78,53 @@ try:
     st.subheader("🏆 Ranking con Mejor y Peor Mapa Acumulada (ordenado por Rendimiento Total)")
     st.dataframe(rank_total_fmt, use_container_width=True)
 
+    # --- Segunda tabla: Rendimiento, Bajas, Muertes y Ratio por Jugador y Mapa ---
+    st.subheader("📋 Rendimiento, Bajas, Muertes y Ratio por Jugador y Mapa")
+
+    # Pivot rendimiento, bajas y muertes
+    pivot_rend = df.pivot_table(index="Jugador", columns="Mapa", values="Rendimiento", aggfunc="sum", fill_value=0)
+    pivot_bajas = df.pivot_table(index="Jugador", columns="Mapa", values="Bajas", aggfunc="sum", fill_value=0)
+    pivot_muertes = df.pivot_table(index="Jugador", columns="Mapa", values="Muertes", aggfunc="sum", fill_value=0)
+
+    # Calcular ratio = bajas/muertes (por mapa)
+    pivot_ratio = pivot_bajas / pivot_muertes.replace(0, 1)  # evitar división por 0
+    pivot_ratio = pivot_ratio.round(2)
+
+    # Construir tabla final combinando métricas
+    tablas = []
+    for mapa in mapas:  # mantener orden de hojas[:6]
+        df_tmp = pd.DataFrame({
+            (mapa, "Rendimiento"): pivot_rend[mapa],
+            (mapa, "Bajas"): pivot_bajas[mapa],
+            (mapa, "Muertes"): pivot_muertes[mapa],
+            (mapa, "Ratio"): pivot_ratio[mapa]
+        })
+        tablas.append(df_tmp)
+
+    tabla_final = pd.concat(tablas, axis=1)
+
+    # Agregar total rendimiento al final
+    tabla_final[("Total", "Rendimiento")] = tabla_final.xs("Rendimiento", axis=1, level=1).sum(axis=1)
+
+    # Ordenar por rendimiento total
+    tabla_final = tabla_final.sort_values(("Total", "Rendimiento"), ascending=False)
+
+    # Formateo: miles con punto y ratio con coma
+    def fmt(val, tipo):
+        if pd.isna(val):
+            return ""
+        if tipo == "Ratio":
+            return f"{val:,.2f}".replace(".", ",")
+        else:
+            return f"{int(val):,}".replace(",", ".")
+
+    tabla_fmt = tabla_final.copy()
+    for col in tabla_fmt.columns:
+        tipo = col[1]
+        tabla_fmt[col] = tabla_fmt[col].apply(lambda x: fmt(x, tipo))
+
+    st.dataframe(tabla_fmt, use_container_width=True)
+
     # --- Balance de equipos ---
     equipoA, equipoB = [], []
     promA, promB = 0, 0
@@ -198,55 +245,6 @@ try:
         tooltip=["Jugador", "Promedio"]
     )
     st.altair_chart(chart_prom, use_container_width=True)
-
-      # --- Nueva tabla: acumulado por jugador y mapa con bajas, muertes, ratio y total ---
-    st.subheader("📋 Rendimiento, Bajas, Muertes y Ratio por Jugador y Mapa")
-
-    # Pivot rendimiento, bajas y muertes
-    pivot_rend = df.pivot_table(index="Jugador", columns="Mapa", values="Rendimiento", aggfunc="sum", fill_value=0)
-    pivot_bajas = df.pivot_table(index="Jugador", columns="Mapa", values="Bajas", aggfunc="sum", fill_value=0)
-    pivot_muertes = df.pivot_table(index="Jugador", columns="Mapa", values="Muertes", aggfunc="sum", fill_value=0)
-
-    # Calcular ratio = bajas/muertes (por mapa)
-    pivot_ratio = pivot_bajas / pivot_muertes.replace(0, 1)  # evitar div/0
-    pivot_ratio = pivot_ratio.round(2)
-
-    # Construir tabla final combinando métricas
-    tablas = []
-    for mapa in mapas:  # mismo orden que hojas[:6]
-        df_tmp = pd.DataFrame({
-            (mapa, "Rendimiento"): pivot_rend[mapa],
-            (mapa, "Bajas"): pivot_bajas[mapa],
-            (mapa, "Muertes"): pivot_muertes[mapa],
-            (mapa, "Ratio"): pivot_ratio[mapa]
-        })
-        tablas.append(df_tmp)
-
-    tabla_final = pd.concat(tablas, axis=1)
-
-    # Agregar total rendimiento al final
-    tabla_final[("Total", "Rendimiento")] = tabla_final.xs("Rendimiento", axis=1, level=1).sum(axis=1)
-
-    # Ordenar por rendimiento total
-    tabla_final = tabla_final.sort_values(("Total", "Rendimiento"), ascending=False)
-
-    # Formateo: miles con punto y ratio con coma
-    def fmt(val, tipo):
-        if pd.isna(val):
-            return ""
-        if tipo == "Ratio":
-            return f"{val:,.2f}".replace(".", ",")
-        else:
-            return f"{int(val):,}".replace(",", ".")
-
-    tabla_fmt = tabla_final.copy()
-    for col in tabla_fmt.columns:
-        tipo = col[1]
-        tabla_fmt[col] = tabla_fmt[col].apply(lambda x: fmt(x, tipo))
-
-    # Mostrar en Streamlit
-    st.dataframe(tabla_fmt, use_container_width=True)
-
 
 except FileNotFoundError:
     st.error("El archivo no se encontró. Verifica que esté en el directorio correcto.")
