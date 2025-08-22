@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 
 st.set_page_config(page_title="Ranking Campeonato", layout="wide")
 
@@ -58,8 +59,8 @@ try:
 
     # Columna compacta con mejor y peor mapa
     resumen["Mapas (Mejor | Peor)"] = (
-        "Mejor: " + resumen["Mejor mapa"] + " (" + resumen["Rendimiento mejor"].map("{:,.0f}".format).str.replace(",", ".") + ")" +
-        " | Peor: " + resumen["Peor mapa"] + " (" + resumen["Rendimiento peor"].map("{:,.0f}".format).str.replace(",", ".") + ")"
+        "Mejor: " + resumen["Mejor mapa"] + " (" + resumen["Rendimiento mejor"].map("{:,.0f}".format).str.replace(",", ".", regex=False) + ")" +
+        " | Peor: " + resumen["Peor mapa"] + " (" + resumen["Rendimiento peor"].map("{:,.0f}".format).str.replace(",", ".", regex=False) + ")"
     )
 
     # --- Rankings ---
@@ -68,11 +69,11 @@ try:
 
     # Formateo
     rank_total_fmt = rank_total[["Posición", "Jugador", "Fechas_jugadas","Bajas_total","Muertes_total", "Ratio","Rendimiento_total", "Promedio", "Mapas (Mejor | Peor)"]].copy()
-    rank_total_fmt["Rendimiento_total"] = rank_total_fmt["Rendimiento_total"].map("{:,.0f}".format).str.replace(",", ".")
-    rank_total_fmt["Promedio"] = rank_total_fmt["Promedio"].map("{:,.0f}".format).str.replace(",", ".")
-    rank_total_fmt["Ratio"] = rank_total_fmt["Ratio"].map("{:,.2f}".format).str.replace(".", ",")
-    rank_total_fmt["Bajas_total"] = rank_total_fmt["Bajas_total"].map("{:,.0f}".format).str.replace(",", ".")
-    rank_total_fmt["Muertes_total"] = rank_total_fmt["Muertes_total"].map("{:,.0f}".format).str.replace(",", ".")
+    rank_total_fmt["Rendimiento_total"] = rank_total_fmt["Rendimiento_total"].map("{:,.0f}".format).str.replace(",", ".", regex=False)
+    rank_total_fmt["Promedio"] = rank_total_fmt["Promedio"].map("{:,.2f}".format).str.replace(".", ",", regex=False)
+    rank_total_fmt["Ratio"] = rank_total_fmt["Ratio"].map("{:,.2f}".format).str.replace(".", ",", regex=False)
+    rank_total_fmt["Bajas_total"] = rank_total_fmt["Bajas_total"].map("{:,.0f}".format).str.replace(",", ".", regex=False)
+    rank_total_fmt["Muertes_total"] = rank_total_fmt["Muertes_total"].map("{:,.0f}".format).str.replace(",", ".", regex=False)
 
     st.subheader("🏆 Ranking con Mejor y Peor Mapa Acumulada (ordenado por Rendimiento Total)")
     st.dataframe(rank_total_fmt, use_container_width=True)
@@ -95,7 +96,7 @@ try:
     dfB = pd.DataFrame(equipoB)[["Jugador", "Promedio"]]
 
     for df_equipo in [dfA, dfB]:
-        df_equipo["Promedio"] = df_equipo["Promedio"].map("{:,.0f}".format).str.replace(",", ".")
+        df_equipo["Promedio"] = df_equipo["Promedio"].map("{:,.0f}".format).str.replace(",", ".", regex=False)
 
     st.subheader("⚖️ Equipos Balanceados (por promedio)")
 
@@ -142,7 +143,6 @@ try:
             )
             .reset_index()
         )
-
         resumen_fecha["Promedio"] = (resumen_fecha["Rendimiento_total"] / resumen_fecha["Mapas_jugados"]).round(2)
 
         # Unir mejor y peor mapa
@@ -150,32 +150,61 @@ try:
 
         # Columna combinada mejor | peor
         mapa_fecha["Mapas (Mejor | Peor)"] = (
-            "Mejor: " + mapa_fecha["Mejor mapa"] + " (" + mapa_fecha["Rendimiento mejor"].map("{:,.0f}".format).str.replace(",", ".") + ")" +
-            " | Peor: " + mapa_fecha["Peor mapa"] + " (" + mapa_fecha["Rendimiento peor"].map("{:,.0f}".format).str.replace(",", ".") + ")"
+            "Mejor: " + mapa_fecha["Mejor mapa"] + " (" + mapa_fecha["Rendimiento mejor"].map("{:,.0f}".format).str.replace(",", ".", regex=False) + ")" +
+            " | Peor: " + mapa_fecha["Peor mapa"] + " (" + mapa_fecha["Rendimiento peor"].map("{:,.0f}".format).str.replace(",", ".", regex=False) + ")"
         )
 
         # Formateo
-        mapa_fecha["Rendimiento_total"] = mapa_fecha["Rendimiento_total"].map("{:,.0f}".format).str.replace(",", ".")
-        mapa_fecha["Promedio"] = mapa_fecha["Promedio"].map("{:,.0f}".format).str.replace(",", ".")
-        mapa_fecha["Bajas_total"] = mapa_fecha["Bajas_total"].map("{:,.0f}".format).str.replace(",", ".")
-        mapa_fecha["Muertes_total"] = mapa_fecha["Muertes_total"].map("{:,.0f}".format).str.replace(",", ".")
+        mapa_fecha["Rendimiento_total"] = mapa_fecha["Rendimiento_total"].map("{:,.0f}".format).str.replace(",", ".", regex=False)
+        mapa_fecha["Promedio"] = mapa_fecha["Promedio"].map("{:,.0f}".format).str.replace(",", ".", regex=False)
+        mapa_fecha["Bajas_total"] = mapa_fecha["Bajas_total"].map("{:,.0f}".format).str.replace(",", ".", regex=False)
+        mapa_fecha["Muertes_total"] = mapa_fecha["Muertes_total"].map("{:,.0f}".format).str.replace(",", ".", regex=False)
 
         st.dataframe(mapa_fecha[["Jugador", "Bajas_total", "Muertes_total", "Rendimiento_total", "Promedio", "Mapas (Mejor | Peor)"]], use_container_width=True)
 
-        # --- Gráficos de la fecha seleccionada ---
+        # --- Gráficos de la fecha seleccionada con Altair ---
         st.subheader(f"📊 Rendimiento por Jugador – Fecha {selected_fecha}")
-        st.bar_chart(df_fecha.groupby("Jugador")["Rendimiento"].sum())
+        chart_rend = alt.Chart(df_fecha).mark_bar().encode(
+            x=alt.X("Jugador:N", sort="-y"),
+            y="sum(Rendimiento):Q",
+            tooltip=["Jugador", "sum(Rendimiento)"]
+        )
+        st.altair_chart(chart_rend, use_container_width=True)
 
         st.subheader(f"📊 Bajas y Muertes – Fecha {selected_fecha}")
-        bajas_muertes = df_fecha.groupby("Jugador")[["Bajas", "Muertes"]].sum()
-        st.bar_chart(bajas_muertes)
+        bajas_muertes = df_fecha.groupby("Jugador")[["Bajas", "Muertes"]].sum().reset_index()
+        bajas_muertes_melt = bajas_muertes.melt("Jugador", var_name="Tipo", value_name="Cantidad")
+        chart_bm = alt.Chart(bajas_muertes_melt).mark_bar().encode(
+            x=alt.X("Jugador:N", sort="-y"),
+            y="Cantidad:Q",
+            color="Tipo:N",
+            tooltip=["Jugador", "Tipo", "Cantidad"]
+        )
+        st.altair_chart(chart_bm, use_container_width=True)
 
-    # --- Gráficos acumulados ---
+    # --- Gráficos acumulados con Altair ---
     st.subheader("📊 Rendimiento Total por Jugador (Acumulado)")
-    st.bar_chart(rank_total.set_index("Jugador")["Rendimiento_total"])
+    chart_total = alt.Chart(rank_total).mark_bar().encode(
+        x=alt.X("Jugador:N", sort="-y"),
+        y="Rendimiento_total:Q",
+        tooltip=["Jugador", "Rendimiento_total"]
+    )
+    st.altair_chart(chart_total, use_container_width=True)
 
     st.subheader("📊 Promedio por Jugador (Acumulado)")
-    st.bar_chart(rank_prom.set_index("Jugador")["Promedio"])
+    chart_prom = alt.Chart(rank_prom).mark_bar().encode(
+        x=alt.X("Jugador:N", sort="-y"),
+        y="Promedio:Q",
+        tooltip=["Jugador", "Promedio"]
+    )
+    st.altair_chart(chart_prom, use_container_width=True)
+
+    # --- Nueva tabla: acumulado por jugador y mapa ---
+    st.subheader("📋 Rendimiento Acumulado por Jugador y Mapa")
+    tabla_mapa = acumulado_mapa.pivot(index="Jugador", columns="Mapa", values="Rendimiento").fillna(0).astype(int)
+    # Formatear separador de miles
+    tabla_mapa = tabla_mapa.applymap(lambda x: f"{x:,.0f}".replace(",", "."))
+    st.dataframe(tabla_mapa, use_container_width=True)
 
 except FileNotFoundError:
     st.error("El archivo no se encontró. Verifica que esté en el directorio correcto.")
