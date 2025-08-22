@@ -199,12 +199,33 @@ try:
     )
     st.altair_chart(chart_prom, use_container_width=True)
 
-    # --- Nueva tabla: acumulado por jugador y mapa ---
-    st.subheader("📋 Rendimiento Acumulado por Jugador y Mapa")
+   # --- Nueva tabla: acumulado por jugador y mapa con bajas, muertes, ratio y total ---
+    st.subheader("📋 Rendimiento Acumulado por Jugador y Mapa (con estadísticas)")
+
+    # Tabla rendimiento por mapa (pivot)
     tabla_mapa = acumulado_mapa.pivot(index="Jugador", columns="Mapa", values="Rendimiento").fillna(0).astype(int)
-    # Formatear separador de miles
-    tabla_mapa = tabla_mapa.applymap(lambda x: f"{x:,.0f}".replace(",", "."))
-    st.dataframe(tabla_mapa, use_container_width=True)
+
+    # Agregar bajas, muertes y ratio
+    bajas_muertes = df.groupby("Jugador")[["Bajas", "Muertes"]].sum()
+    bajas_muertes["Ratio"] = (bajas_muertes["Bajas"] / bajas_muertes["Muertes"]).round(2)
+
+    # Agregar total de rendimiento
+    tabla_mapa["Total Rendimiento"] = tabla_mapa.sum(axis=1)
+
+    # Unir todo
+    tabla_final = tabla_mapa.merge(bajas_muertes, left_index=True, right_index=True)
+
+    # Ordenar por rendimiento total (descendente)
+    tabla_final = tabla_final.sort_values("Total Rendimiento", ascending=False)
+
+    # Formateo (separador de miles y ratio con coma decimal)
+    for col in tabla_final.columns:
+        if col in ["Ratio"]:
+            tabla_final[col] = tabla_final[col].map("{:,.2f}".format).str.replace(".", ",", regex=False)
+        else:
+            tabla_final[col] = tabla_final[col].map("{:,.0f}".format).str.replace(",", ".", regex=False)
+
+    st.dataframe(tabla_final, use_container_width=True)
 
 except FileNotFoundError:
     st.error("El archivo no se encontró. Verifica que esté en el directorio correcto.")
