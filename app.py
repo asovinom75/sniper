@@ -14,7 +14,7 @@ archivo = "Estadiscticas Campeonato interno Sniper Elite 6_ver2.xlsx"
 # ============================
 # 📥 Cargar y limpiar datos (solo primeras 6 hojas)
 # ============================
-all_sheets = pd.read_excel(archivo, sheet_name=None, skiprows=4)
+all_sheets = pd.read_excel(archivo, sheet_name=None, skiprows=0)
 sheets_to_use = list(all_sheets.keys())[:6]
 
 df_list = []
