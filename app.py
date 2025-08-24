@@ -16,6 +16,13 @@ st.title("📊 Campeonato Sniper Elite Resistencia – Dashboard")
 archivo = "Estadiscticas Campeonato interno Sniper Elite 6_ver2.xlsx"
 df = pd.read_excel(archivo, skiprows=4)  # recuerda que los datos empiezan en la fila 5
 
+xls = pd.ExcelFile(archivo)
+hojas = xls.sheet_names
+
+# Tomar solo las primeras 6 hojas (mapas)
+mapas = hojas[:6]
+
+
 # Normalizar nombres de columnas (quita espacios, pasa a minúscula y reemplaza espacios por _)
 df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_").str.replace("á", "a").str.replace("é", "e").str.replace("í", "i").str.replace("ó", "o").str.replace("ú", "u")
 
