@@ -57,20 +57,32 @@ try:
     rank_total = resumen.sort_values("Rendimiento_total", ascending=False).reset_index(drop=True)
     rank_total.insert(0, "Posición", rank_total.index + 1)
 
-    # --- KPI ACUMULADO ---
-    total_jugadores = resumen["Jugador"].nunique()
-    total_fechas = df["Fecha"].nunique()
-    bajas_totales = df["Bajas"].sum()
-    muertes_totales = df["Muertes"].sum()
-    rendimiento_total = df["Rendimiento"].sum()
+    # ------------------ SELECCIÓN DE JUGADOR ------------------
+    st.sidebar.header("🎮 Filtros")
+    jugador_sel = st.sidebar.selectbox("Selecciona un jugador", ["(Todos)"] + list(resumen["Jugador"].unique()))
 
+    if jugador_sel == "(Todos)":
+        df_filtrado = df.copy()
+        res_filtrado = resumen.copy()
+    else:
+        df_filtrado = df[df["Jugador"] == jugador_sel]
+        res_filtrado = resumen[resumen["Jugador"] == jugador_sel]
+
+    # --- KPI’s grandes en top ---
     st.markdown("## 🔑 KPI’s Acumulados")
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Jugadores", f"{total_jugadores}")
-    col2.metric("Fechas jugadas", f"{total_fechas}")
-    col3.metric("Bajas totales", f"{bajas_totales:,}".replace(",", "."))
-    col4.metric("Muertes totales", f"{muertes_totales:,}".replace(",", "."))
-    col5.metric("Rendimiento total", f"{rendimiento_total:,}".replace(",", "."))
+
+    bajas = res_filtrado["Bajas_total"].sum()
+    muertes = res_filtrado["Muertes_total"].sum()
+    rend = res_filtrado["Rendimiento_total"].sum()
+    prom = res_filtrado["Promedio"].mean()
+    ratio = res_filtrado["Ratio"].mean()
+
+    col1.metric("Bajas", f"{bajas:,}".replace(",", "."))
+    col2.metric("Muertes", f"{muertes:,}".replace(",", "."))
+    col3.metric("Rendimiento", f"{rend:,}".replace(",", "."))
+    col4.metric("Promedio", f"{prom:,.2f}".replace(".", ","))
+    col5.metric("Ratio", f"{ratio:,.2f}".replace(".", ","))
 
     # ------------------ TABS ------------------
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -83,18 +95,12 @@ try:
 
     # TAB 1 - Ranking
     with tab1:
-        st.subheader("🏆 Ranking con Mejor y Peor Mapa Acumulada (ordenado por Rendimiento Total)")
+        st.subheader("🏆 Ranking con Mejor y Peor Mapa (Acumulado)")
         st.dataframe(rank_total[["Posición","Jugador","Fechas_jugadas","Bajas_total","Muertes_total","Ratio","Rendimiento_total","Promedio","Mapas (Mejor | Peor)"]], use_container_width=True)
 
     # TAB 2 - Rendimiento por Jugador y Mapa
     with tab2:
         st.subheader("📋 Rendimiento, Bajas, Muertes y Ratio por Jugador y Mapa")
-
-        # KPI de este tab
-        st.markdown("### 🔑 KPI’s Rendimiento por Mapa")
-        col1, col2 = st.columns(2)
-        col1.metric("Promedio global Ratio", f"{resumen['Ratio'].mean():.2f}".replace(".", ","))
-        col2.metric("Rendimiento promedio jugador", f"{resumen['Promedio'].mean():.2f}".replace(".", ","))
 
         pivot_rend = df.pivot_table(index="Jugador", columns="Mapa", values="Rendimiento", aggfunc="sum", fill_value=0)
         pivot_bajas = df.pivot_table(index="Jugador", columns="Mapa", values="Bajas", aggfunc="sum", fill_value=0)
@@ -114,6 +120,7 @@ try:
         tabla_final = pd.concat(tablas, axis=1)
         tabla_final[("Total", "Rendimiento")] = tabla_final.xs("Rendimiento", axis=1, level=1).sum(axis=1)
         tabla_final = tabla_final.sort_values(("Total", "Rendimiento"), ascending=False)
+
         st.dataframe(tabla_final, use_container_width=True)
 
     # TAB 3 - Balance de equipos
@@ -144,7 +151,7 @@ try:
 
     # TAB 4 - Estadísticas por Jugador y Fecha
     with tab4:
-        st.subheader("🌍 Estadísticas por Jugador y Fecha (Mejor y Peor Mapa)")
+        st.subheader("🌍 Estadísticas por Jugador y Fecha")
 
         unique_fechas = sorted(df['Fecha'].unique())
         selected_fecha = st.selectbox("Selecciona una fecha", unique_fechas)
@@ -152,31 +159,29 @@ try:
         if selected_fecha:
             df_fecha = df[df['Fecha'] == selected_fecha]
 
-            # KPI por fecha
-            st.markdown("### 🔑 KPI’s Fecha seleccionada")
+            # KPI de fecha
             col1, col2, col3 = st.columns(3)
             col1.metric("Bajas", f"{df_fecha['Bajas'].sum():,}".replace(",", "."))
             col2.metric("Muertes", f"{df_fecha['Muertes'].sum():,}".replace(",", "."))
             col3.metric("Rendimiento", f"{df_fecha['Rendimiento'].sum():,}".replace(",", "."))
 
-            # (resto de tu código igual...)
-            # ...
+            st.dataframe(df_fecha, use_container_width=True)
 
     # TAB 5 - Gráficos acumulados
     with tab5:
-        st.subheader("📊 Rendimiento Total por Jugador (Acumulado)")
-
-        # KPI tab 5
-        st.markdown("### 🔑 KPI’s Gráficos")
-        col1, col2 = st.columns(2)
-        col1.metric("Máximo Rendimiento", f"{resumen['Rendimiento_total'].max():,}".replace(",", "."))
-        col2.metric("Promedio Rendimiento", f"{resumen['Rendimiento_total'].mean():.2f}".replace(".", ","))
+        st.subheader("📊 Gráficos Acumulados")
 
         chart_total = alt.Chart(rank_total).mark_bar().encode(
             x=alt.X("Jugador:N", sort="-y"),
             y="Rendimiento_total:Q"
         )
         st.altair_chart(chart_total, use_container_width=True)
+
+        chart_prom = alt.Chart(rank_total).mark_bar().encode(
+            x=alt.X("Jugador:N", sort="-y"),
+            y="Promedio:Q"
+        )
+        st.altair_chart(chart_prom, use_container_width=True)
 
 except FileNotFoundError:
     st.error("El archivo no se encontró. Verifica que esté en el directorio correcto.")
