@@ -9,31 +9,27 @@ st.set_page_config(page_title="Campeonato Sniper Elite", layout="wide")
 
 st.title("📊 Campeonato Sniper Elite Resistencia – Dashboard")
 
-# ------------------------
-# Cargar archivo Excel
-# ------------------------
+# ============================
+# 📥 Cargar y limpiar el archivo Excel
+# ============================
+
 archivo = "Estadiscticas Campeonato interno Sniper Elite 6_ver2.xlsx"
-df = pd.read_excel(archivo, sheet_name=None)
+df = pd.read_excel(archivo, skiprows=4)  # recuerda que los datos empiezan en la fila 5
 
-# Los primeros 6 mapas son válidos
-mapas = list(df.keys())[:6]
+# Normalizar nombres de columnas (quita espacios, pasa a minúscula y reemplaza espacios por _)
+df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_").str.replace("á", "a").str.replace("é", "e").str.replace("í", "i").str.replace("ó", "o").str.replace("ú", "u")
 
-# Unir todos los datos en un solo DataFrame
-dataframes = []
-for mapa in mapas:
-    tmp = df[mapa].iloc[4:, 2:].copy()  # datos desde fila 5, col C
-    tmp.columns = df[mapa].iloc[3, 2:]  # fila 4 como encabezado
-    tmp["Mapa"] = mapa
-    dataframes.append(tmp)
+# Mostrar columnas detectadas
+st.write("✅ Columnas detectadas después de normalización:", df.columns.tolist())
 
-df = pd.concat(dataframes, ignore_index=True)
+# Definir qué columnas deben ser numéricas
+cols_num = ["bajas", "muertes", "rendimiento", "ratio"]
 
-# Convertir a numérico
-for col in ["Bajas", "Muertes", "Rendimiento"]:
-    df[col] = pd.to_numeric(df[col], errors="coerce")
-
-# Crear columna Ratio
-df["Ratio"] = df["Bajas"] / df["Muertes"].replace(0, 1)
+for col in cols_num:
+    if col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    else:
+        st.warning(f"⚠️ La columna '{col}' no está en el archivo. Columnas actuales: {df.columns.tolist()}")
 
 # ------------------------
 # KPIs Iniciales
