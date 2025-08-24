@@ -1,187 +1,159 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import altair as alt
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Configuración de página
-st.set_page_config(page_title="Campeonato Sniper Elite", layout="wide")
-
-st.title("📊 Campeonato Sniper Elite Resistencia – Dashboard")
 
 # ============================
-# 📥 Cargar y limpiar el archivo Excel
+# 📊 Configuración inicial
 # ============================
+st.set_page_config(page_title="Ranking Campeonato Sniper Elite", layout="wide")
+st.title("📊 Campeonato Sniper Elite Resistencia – Consolidado por Jugador")
 
 archivo = "Estadiscticas Campeonato interno Sniper Elite 6_ver2.xlsx"
-df = pd.read_excel(archivo, skiprows=4)  # recuerda que los datos empiezan en la fila 5
 
-xls = pd.ExcelFile(archivo)
-hojas = xls.sheet_names
+# ============================
+# 📥 Cargar y limpiar datos (solo primeras 6 hojas)
+# ============================
+all_sheets = pd.read_excel(archivo, sheet_name=None, skiprows=4)
+sheets_to_use = list(all_sheets.keys())[:6]
 
-# Tomar solo las primeras 6 hojas (mapas)
-mapas = hojas[:6]
+df_list = []
+for name in sheets_to_use:
+    tmp = all_sheets[name].copy()
+    tmp["hoja"] = name  # por trazabilidad
+    df_list.append(tmp)
 
+df = pd.concat(df_list, ignore_index=True)
 
-# Normalizar nombres de columnas (quita espacios, pasa a minúscula y reemplaza espacios por _)
-df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_").str.replace("á", "a").str.replace("é", "e").str.replace("í", "i").str.replace("ó", "o").str.replace("ú", "u")
+# Normalizar nombres de columnas
+df.columns = (
+    df.columns.str.strip()
+    .str.lower()
+    .str.replace(" ", "_")
+    .str.replace("á", "a")
+    .str.replace("é", "e")
+    .str.replace("í", "i")
+    .str.replace("ó", "o")
+    .str.replace("ú", "u")
+)
 
-# Mostrar columnas detectadas
+# Mostrar columnas para depuración
 st.write("✅ Columnas detectadas después de normalización:", df.columns.tolist())
 
-# Definir qué columnas deben ser numéricas
+# Convertir columnas numéricas
 cols_num = ["bajas", "muertes", "rendimiento", "ratio"]
-
 for col in cols_num:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
     else:
         st.warning(f"⚠️ La columna '{col}' no está en el archivo. Columnas actuales: {df.columns.tolist()}")
 
-# ------------------------
-# KPIs Iniciales
-# ------------------------
-st.subheader("📌 Indicadores Clave del Torneo")
+# ============================
+# 📌 KPIs principales
+# ============================
+st.subheader("📌 KPIs del Campeonato")
 
-acum = df.groupby("Jugador").agg({"Rendimiento":"sum","Bajas":"sum","Muertes":"sum"}).reset_index()
-acum["Ratio"] = acum["Bajas"] / acum["Muertes"].replace(0,1)
+if "rendimiento" in df.columns:
+    rendimiento_total = df.groupby("jugador")["rendimiento"].sum().reset_index()
+    top_jugador = rendimiento_total.loc[rendimiento_total["rendimiento"].idxmax()]
 
-mejor_jugador = acum.loc[acum["Rendimiento"].idxmax(), "Jugador"]
-mejor_rend = acum["Rendimiento"].max()
+    mejor_ratio = df.groupby("jugador")["ratio"].mean().reset_index()
+    top_ratio = mejor_ratio.loc[mejor_ratio["ratio"].idxmax()]
 
-mejor_ratio_jugador = acum.loc[acum["Ratio"].idxmax(), "Jugador"]
-mejor_ratio = acum["Ratio"].max()
+    col1, col2, col3 = st.columns(3)
+    col1.metric("🏆 Jugador con mayor rendimiento", top_jugador["jugador"], f"{top_jugador['rendimiento']:.0f}")
+    col2.metric("🔥 Mejor Ratio", top_ratio["jugador"], f"{top_ratio['ratio']:.2f}")
+    col3.metric("📊 Promedio Global Rendimiento", f"{df['rendimiento'].mean():.2f}")
+else:
+    st.warning("⚠️ No se encontró la columna 'rendimiento' en el archivo.")
 
-prom_rend = acum["Rendimiento"].mean()
+# ============================
+# 📂 Tabs de navegación
+# ============================
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    ["🏆 Ranking", "📋 Tablas Detalladas", "⚖️ Equipos", "🌍 Por Fecha", "📈 Visualizaciones"]
+)
 
-col1, col2, col3 = st.columns(3)
-col1.metric("🏅 Mayor Rendimiento", mejor_jugador, f"{mejor_rend:,.0f}".replace(",", "."))
-col2.metric("⚡ Mejor Ratio", mejor_ratio_jugador, f"{mejor_ratio:,.2f}".replace(".", ","))
-col3.metric("📊 Rendimiento Promedio", f"{prom_rend:,.0f}".replace(",", "."))
-
-# ------------------------
-# Tabs
-# ------------------------
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🏆 Ranking",
-    "📋 Tablas Detalladas",
-    "⚖️ Equipos Balanceados",
-    "🌍 Estadísticas por Fecha",
-    "📈 Visualizaciones Avanzadas"
-])
-
-# ------------------------
-# TAB 1: Ranking
-# ------------------------
+# ---------------- TAB 1: Ranking ----------------
 with tab1:
-    st.subheader("🏆 Ranking con Mejor y Peor Mapa Acumulada")
+    st.subheader("🏆 Ranking General de Jugadores")
+    ranking = df.groupby("jugador")[["bajas", "muertes", "rendimiento"]].sum().reset_index()
+    ranking["ratio"] = ranking["bajas"] / ranking["muertes"].replace(0, np.nan)
+    ranking = ranking.sort_values(by="rendimiento", ascending=False).reset_index(drop=True)
+    st.dataframe(ranking, use_container_width=True)
 
-    # Mejor y peor mapa por jugador
-    resumen = df.groupby(["Jugador","Mapa"]).agg({"Rendimiento":"sum"}).reset_index()
-    mejor = resumen.loc[resumen.groupby("Jugador")["Rendimiento"].idxmax()].set_index("Jugador")
-    peor = resumen.loc[resumen.groupby("Jugador")["Rendimiento"].idxmin()].set_index("Jugador")
-
-    rank_total = resumen.groupby("Jugador")["Rendimiento"].sum().reset_index()
-    rank_total["Mejor Mapa"] = mejor["Mapa"].values
-    rank_total["Peor Mapa"] = peor["Mapa"].values
-    rank_total = rank_total.sort_values("Rendimiento", ascending=False).reset_index(drop=True)
-    rank_total.index += 1
-
-    rank_total_fmt = rank_total.copy()
-    rank_total_fmt["Rendimiento"] = rank_total_fmt["Rendimiento"].apply(lambda x: f"{int(x):,}".replace(",", "."))
-
-    st.dataframe(rank_total_fmt, use_container_width=True)
-
-# ------------------------
-# TAB 2: Tablas Detalladas
-# ------------------------
+# ---------------- TAB 2: Tablas Detalladas ----------------
 with tab2:
-    st.subheader("📋 Rendimiento, Bajas, Muertes y Ratio por Jugador y Mapa")
+    st.subheader("📋 Rendimiento Acumulado por Jugador y Mapa")
 
-    pivot_rend = df.pivot_table(index="Jugador", columns="Mapa", values="Rendimiento", aggfunc="sum", fill_value=0)
-    pivot_bajas = df.pivot_table(index="Jugador", columns="Mapa", values="Bajas", aggfunc="sum", fill_value=0)
-    pivot_muertes = df.pivot_table(index="Jugador", columns="Mapa", values="Muertes", aggfunc="sum", fill_value=0)
-    pivot_ratio = (pivot_bajas / pivot_muertes.replace(0,1)).round(2)
+    if {"jugador", "mapa", "bajas", "muertes", "rendimiento", "ratio"}.issubset(df.columns):
+        pivot = df.pivot_table(
+            index="jugador",
+            columns="mapa",
+            values=["bajas", "muertes", "rendimiento", "ratio"],
+            aggfunc="sum",
+            fill_value=0
+        )
 
-    tablas = []
-    for mapa in mapas:
-        df_tmp = pd.DataFrame({
-            (mapa, "Rendimiento"): pivot_rend[mapa],
-            (mapa, "Bajas"): pivot_bajas[mapa],
-            (mapa, "Muertes"): pivot_muertes[mapa],
-            (mapa, "Ratio"): pivot_ratio[mapa]
-        })
-        tablas.append(df_tmp)
+        # Reordenar columnas para más claridad
+        pivot = pivot.swaplevel(axis=1).sort_index(axis=1, level=0)
 
-    tabla_final = pd.concat(tablas, axis=1)
-    tabla_final[("Total","Rendimiento")] = tabla_final.xs("Rendimiento", axis=1, level=1).sum(axis=1)
-    tabla_final = tabla_final.sort_values(("Total","Rendimiento"), ascending=False)
+        # Columna total final
+        pivot["Total"] = pivot.sum(axis=1, numeric_only=True)
 
-    def fmt(val,tipo):
-        if pd.isna(val): return ""
-        if tipo=="Ratio": return f"{val:,.2f}".replace(".",",")
-        else: return f"{int(val):,}".replace(",", ".")
+        pivot = pivot.sort_values(by=("Total", ""), ascending=False)
 
-    tabla_fmt = tabla_final.copy()
-    for col in tabla_fmt.columns:
-        tipo = col[1]
-        tabla_fmt[col] = tabla_fmt[col].apply(lambda x: fmt(x,tipo))
+        st.dataframe(pivot, use_container_width=True)
+    else:
+        st.warning("⚠️ No se encontraron todas las columnas necesarias para esta tabla.")
 
-    st.dataframe(tabla_fmt, use_container_width=True)
-
-# ------------------------
-# TAB 3: Equipos Balanceados
-# ------------------------
+# ---------------- TAB 3: Equipos ----------------
 with tab3:
     st.subheader("⚖️ Propuesta de Equipos Balanceados")
-    jugadores = list(acum.sort_values("Rendimiento", ascending=False)["Jugador"])
-    equipo1 = jugadores[::2]
-    equipo2 = jugadores[1::2]
-    st.write("**Equipo 1:**", ", ".join(equipo1))
-    st.write("**Equipo 2:**", ", ".join(equipo2))
+    # Aquí se puede implementar lógica para dividir en equipos (placeholder)
+    st.info("🚧 Próximamente: división automática en equipos balanceados.")
 
-# ------------------------
-# TAB 4: Estadísticas por Fecha
-# ------------------------
+# ---------------- TAB 4: Por Fecha ----------------
 with tab4:
     st.subheader("🌍 Estadísticas por Jugador y Fecha")
+    if "fecha" in df.columns:
+        fecha_sel = st.selectbox("Selecciona una fecha", sorted(df["fecha"].dropna().unique()))
+        filtro = df[df["fecha"] == fecha_sel]
 
-    fechas = df["Fecha"].dropna().unique()
-    fecha_sel = st.selectbox("Selecciona una fecha", fechas)
+        tabla_fecha = filtro.groupby("jugador")[["bajas", "muertes", "rendimiento"]].sum().reset_index()
+        tabla_fecha["ratio"] = tabla_fecha["bajas"] / tabla_fecha["muertes"].replace(0, np.nan)
+        tabla_fecha = tabla_fecha.sort_values(by="rendimiento", ascending=False).reset_index(drop=True)
 
-    df_fecha = df[df["Fecha"]==fecha_sel]
+        st.dataframe(tabla_fecha, use_container_width=True)
+    else:
+        st.warning("⚠️ No se encontró la columna 'fecha' en el archivo.")
 
-    chart = alt.Chart(df_fecha).mark_bar().encode(
-        x="Jugador",
-        y="Rendimiento",
-        color="Mapa"
-    ).properties(width=700, height=400)
-
-    st.altair_chart(chart, use_container_width=True)
-
-# ------------------------
-# TAB 5: Visualizaciones Avanzadas
-# ------------------------
+# ---------------- TAB 5: Visualizaciones ----------------
 with tab5:
-    st.subheader("📈 Comparaciones Avanzadas")
+    st.subheader("📈 Gráficos y Visualizaciones")
 
-    # Radar Chart
-    st.markdown("### Radar Chart de Rendimiento por Mapa")
-    radar_df = resumen.pivot(index="Jugador", columns="Mapa", values="Rendimiento").fillna(0).reset_index()
-    radar_df = pd.melt(radar_df, id_vars=["Jugador"], var_name="Mapa", value_name="Rendimiento")
-
-    radar_chart = alt.Chart(radar_df).mark_line(point=True).encode(
-        theta=alt.Theta("Mapa:N", sort=mapas),
-        radius="Rendimiento:Q",
-        color="Jugador:N"
-    ).properties(width=600, height=600)
-
-    st.altair_chart(radar_chart, use_container_width=True)
-
-    # Heatmap
+    # 🔥 Heatmap con Altair
     st.markdown("### 🔥 Heatmap de Rendimiento por Jugador y Mapa")
-    heatmap_df = df.pivot_table(index="Jugador", columns="Mapa", values="Rendimiento", aggfunc="sum", fill_value=0)
 
-    fig, ax = plt.subplots(figsize=(10,6))
-    sns.heatmap(heatmap_df, annot=True, fmt=".0f", cmap="YlGnBu", linewidths=0.5, cbar_kws={"label":"Rendimiento Total"})
-    st.pyplot(fig)
+    opciones = ["Acumulado"] + sorted(df["fecha"].dropna().unique()) if "fecha" in df.columns else ["Acumulado"]
+    fecha_sel = st.selectbox("Selecciona una fecha o acumulado", opciones, key="heatmap_fecha")
+
+    if fecha_sel == "Acumulado":
+        heatmap_df = df.pivot_table(
+            index="jugador", columns="mapa", values="rendimiento", aggfunc="sum", fill_value=0
+        ).reset_index()
+    else:
+        heatmap_df = df[df["fecha"] == fecha_sel].pivot_table(
+            index="jugador", columns="mapa", values="rendimiento", aggfunc="sum", fill_value=0
+        ).reset_index()
+
+    heatmap_melt = heatmap_df.melt(id_vars=["jugador"], var_name="mapa", value_name="rendimiento")
+
+    heatmap_chart = alt.Chart(heatmap_melt).mark_rect().encode(
+        x=alt.X("mapa:N", title="Mapa"),
+        y=alt.Y("jugador:N", title="Jugador"),
+        color=alt.Color("rendimiento:Q", scale=alt.Scale(scheme="blues")),
+        tooltip=["jugador", "mapa", "rendimiento"]
+    ).properties(width=600, height=400)
+
+    st.altair_chart(heatmap_chart, use_container_width=True)
