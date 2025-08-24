@@ -4,7 +4,7 @@ import altair as alt
 
 st.set_page_config(page_title="Ranking Campeonato", layout="wide")
 
-st.title("📊 Campeonato Sniper Elite Resistencia – Consolidado por Jugador")
+st.title("📊 Campeonato Sniper Elite Resistencia – Consolidado por Jugador feo")
 
 archivo = "Estadiscticas Campeonato interno Sniper Elite 6_ver2.xlsx"
 
