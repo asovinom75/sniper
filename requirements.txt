@@ -2,3 +2,7 @@ streamlit
 pandas
 openpyxl
 plotly.express
+altair
+numpy
+seaborn
+matplotlib
