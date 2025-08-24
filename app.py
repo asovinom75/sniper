@@ -138,6 +138,15 @@ with tab5:
     opciones = ["Acumulado"] + sorted(df["fecha"].dropna().unique()) if "fecha" in df.columns else ["Acumulado"]
     fecha_sel = st.selectbox("Selecciona una fecha o acumulado", opciones, key="heatmap_fecha")
 
+# Comprobar columnas necesarias
+required_cols = ["jugador", "mapa", "rendimiento", "bajas", "muertes"]
+for col in required_cols:
+    if col not in df.columns:
+        st.error(f"Falta columna obligatoria: {col}")
+        st.stop()
+
+
+    
     if fecha_sel == "Acumulado":
         heatmap_df = df.pivot_table(
             index="jugador", columns="mapa", values="rendimiento", aggfunc="sum", fill_value=0
