@@ -81,7 +81,7 @@ try:
     col1.metric("Bajas", f"{bajas:,}".replace(",", "."))
     col2.metric("Muertes", f"{muertes:,}".replace(",", "."))
     col3.metric("Rendimiento", f"{rend:,}".replace(",", "."))
-    col4.metric("Promedio", f"{prom:,.2f}".replace(".", ","))
+    col4.metric("Promedio", f"{prom:,.0f}".replace(".", ","))
     col5.metric("Ratio", f"{ratio:,.2f}".replace(".", ","))
 
     # ------------------ TABS ------------------
@@ -143,8 +143,8 @@ try:
         dfB = pd.DataFrame(equipoB)[["Jugador", "Promedio"]]
 
         col1, col2 = st.columns(2)
-        col1.metric("Promedio Equipo A", f"{promA:,.2f}".replace(",", "."))
-        col2.metric("Promedio Equipo B", f"{promB:,.2f}".replace(",", "."))
+        col1.metric("Promedio Equipo A", f"{promA:,.0f}".replace(",", "."))
+        col2.metric("Promedio Equipo B", f"{promB:,.0f}".replace(",", "."))
 
         col1.dataframe(dfA, use_container_width=True)
         col2.dataframe(dfB, use_container_width=True)
