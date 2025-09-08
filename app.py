@@ -203,7 +203,7 @@ try:
         col1.dataframe(dfA, use_container_width=True)
         col2.dataframe(dfB, use_container_width=True)
 
-    # TAB 4 - Estadísticas por Jugador y Fecha (KPIs sin bonus por simplicidad)
+    # TAB 4 - Estadísticas por Jugador y Fecha (incluye ganadores del bonus)
     with tab4:
         st.subheader("🌍 Estadísticas por Jugador y Fecha")
 
@@ -213,13 +213,30 @@ try:
         if selected_fecha:
             df_fecha = df[df['Fecha'] == selected_fecha]
 
-            # KPI de fecha (solo base; el bonus es un extra por fecha, no por mapa)
+            # KPI de fecha (solo base; el bonus se reporta aparte)
             col1, col2, col3 = st.columns(3)
             col1.metric("Bajas", f"{df_fecha['Bajas'].sum():,}".replace(",", "."))
             col2.metric("Muertes", f"{df_fecha['Muertes'].sum():,}".replace(",", "."))
             col3.metric("Rendimiento", f"{df_fecha['Rendimiento'].sum():,}".replace(",", "."))
 
             st.dataframe(df_fecha, use_container_width=True)
+
+            # --- BONUS GANADORES ---
+            if "Partida Ganada" in df.columns:
+                partidas_fecha = (
+                    df_fecha.groupby("Jugador", as_index=False)["Partida Ganada"].sum()
+                              .rename(columns={"Partida Ganada": "PG"})
+                )
+                max_pg = partidas_fecha["PG"].max()
+                ganadores = partidas_fecha[partidas_fecha["PG"] == max_pg]["Jugador"].tolist()
+
+                if len(ganadores) > 0:
+                    st.markdown("### 🏅 Ganadores del Bonus")
+                    st.write(
+                        f"En la **Fecha {selected_fecha}**, el bonus de **600 puntos** fue entregado a: " +
+                        ", ".join(ganadores) +
+                        f" (con {max_pg} partidas ganadas)."
+                    )
 
     # TAB 5 - Gráficos acumulados (con bonus ya aplicado en 'rank_total')
     with tab5:
