@@ -23,35 +23,35 @@ try:
     # =========================
     # BONUS POR PARTIDA GANADA
     # =========================
-    # Regla: por cada FECHA, el(los) jugador(es) con MAYOR suma de "Partida Ganada"
-    # (suma en los 6 mapas) reciben un BONUS de +600 puntos UNA SOLA VEZ por fecha.
     if "Partida Ganada" in df.columns:
-        # Cuántas partidas ganó cada jugador en cada fecha (sumando mapas)
         partidas_por_fecha = (
             df.groupby(["Fecha", "Jugador"], as_index=False)["Partida Ganada"]
               .sum()
               .rename(columns={"Partida Ganada": "PG"})
         )
 
-        # Máximo de PG por fecha
         partidas_por_fecha["PG_max_fecha"] = partidas_por_fecha.groupby("Fecha")["PG"].transform("max")
-
-        # Marcamos ganadores por fecha (incluye empates)
         partidas_por_fecha["Es_ganador_fecha"] = (partidas_por_fecha["PG"] == partidas_por_fecha["PG_max_fecha"])
 
-        # Asignamos bonus 600 solo a ganadores de esa fecha
         partidas_por_fecha["Bonus"] = partidas_por_fecha["Es_ganador_fecha"].astype(int) * 600
+        partidas_por_fecha["Bonus_count"] = partidas_por_fecha["Es_ganador_fecha"].astype(int)
 
-        # Bonus total por jugador en todo el campeonato
         bonus_total_jugador = (
-            partidas_por_fecha.groupby("Jugador", as_index=False)["Bonus"].sum()
-              .rename(columns={"Bonus": "Bonus_total"})
+            partidas_por_fecha.groupby("Jugador", as_index=False)
+              .agg(
+                  Bonus_total=("Bonus", "sum"),
+                  Bonus_count=("Bonus_count", "sum")
+              )
         )
     else:
-        bonus_total_jugador = pd.DataFrame({"Jugador": df["Jugador"].unique(), "Bonus_total": 0})
+        bonus_total_jugador = pd.DataFrame({
+            "Jugador": df["Jugador"].unique(),
+            "Bonus_total": 0,
+            "Bonus_count": 0
+        })
 
     # ===============================
-    # CONSOLIDACIÓN BASE (SIN BONUS)
+    # CONSOLIDACIÓN BASE
     # ===============================
     resumen_base = (
         df.groupby("Jugador", as_index=False)
@@ -63,13 +63,13 @@ try:
           )
     )
 
-    # ======================================
-    # APLICAR BONUS SOLO AL TOTAL DEL RANKING
-    # ======================================
+    # ===========================
+    # APLICAR BONUS SOLO AL TOTAL
+    # ===========================
     resumen = resumen_base.merge(bonus_total_jugador, on="Jugador", how="left")
     resumen["Bonus_total"] = resumen["Bonus_total"].fillna(0)
+    resumen["Bonus_count"] = resumen["Bonus_count"].fillna(0)
 
-    # El bonus se suma al rendimiento total (afecta ranking y promedio)
     resumen["Rendimiento_total"] = resumen["Rendimiento_total"] + resumen["Bonus_total"]
     resumen["Promedio"] = resumen["Rendimiento_total"] / resumen["Fechas_jugadas"]
     resumen["Ratio"] = resumen["Bajas_total"] / resumen["Muertes_total"]
@@ -77,7 +77,6 @@ try:
     # ===========================
     # MEJOR/PEOR MAPA (SIN BONUS)
     # ===========================
-    # Ojo: el bonus NO se reparte por mapa; mantenemos los acumulados por mapa LIMPIOS.
     acumulado_mapa = df.groupby(["Jugador", "Mapa"], as_index=False)["Rendimiento"].sum()
     mejor_mapa_acum = (
         acumulado_mapa.loc[acumulado_mapa.groupby("Jugador")["Rendimiento"].idxmax()]
@@ -117,7 +116,7 @@ try:
 
     # --- KPI’s grandes en top ---
     st.markdown("## 🔑 KPI’s Acumulados")
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
     bajas = res_filtrado["Bajas_total"].sum()
     muertes = res_filtrado["Muertes_total"].sum()
@@ -125,6 +124,7 @@ try:
     prom = res_filtrado["Promedio"].mean()
     ratio = res_filtrado["Ratio"].mean()
     bonus_total = res_filtrado["Bonus_total"].sum()
+    bonus_count = res_filtrado["Bonus_count"].sum()
 
     col1.metric("Bajas", f"{bajas:,}".replace(",", "."))
     col2.metric("Muertes", f"{muertes:,}".replace(",", "."))
@@ -132,6 +132,7 @@ try:
     col4.metric("Promedio", f"{prom:,.0f}".replace(".", ","))
     col5.metric("Ratio", f"{ratio:,.2f}".replace(".", ","))
     col6.metric("Bonus", f"{bonus_total:,}".replace(",", "."))
+    col7.metric("Veces con Bonus", f"{bonus_count:,}".replace(",", "."))
 
     # ------------------ TABS ------------------
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -147,12 +148,13 @@ try:
         st.subheader("🏆 Ranking con Mejor y Peor Mapa (Acumulado)")
         st.dataframe(
             rank_total[
-                ["Posición","Jugador","Fechas_jugadas","Bajas_total","Muertes_total","Ratio","Rendimiento_total","Promedio","Bonus_total","Mapas (Mejor | Peor)"]
+                ["Posición","Jugador","Fechas_jugadas","Bajas_total","Muertes_total",
+                 "Ratio","Rendimiento_total","Promedio","Bonus_total","Bonus_count","Mapas (Mejor | Peor)"]
             ],
             use_container_width=True
         )
 
-    # TAB 2 - Rendimiento por Jugador y Mapa (SIN bonus)
+    # TAB 2 - Rendimiento por Jugador y Mapa
     with tab2:
         st.subheader("📋 Rendimiento, Bajas, Muertes y Ratio por Jugador y Mapa")
 
@@ -213,7 +215,7 @@ try:
         if selected_fecha:
             df_fecha = df[df['Fecha'] == selected_fecha]
 
-            # KPI de fecha (solo base; el bonus se reporta aparte)
+            # KPI de fecha
             col1, col2, col3 = st.columns(3)
             col1.metric("Bajas", f"{df_fecha['Bajas'].sum():,}".replace(",", "."))
             col2.metric("Muertes", f"{df_fecha['Muertes'].sum():,}".replace(",", "."))
@@ -221,7 +223,7 @@ try:
 
             st.dataframe(df_fecha, use_container_width=True)
 
-            # --- BONUS GANADORES ---
+            # Ganadores del bonus en esa fecha
             if "Partida Ganada" in df.columns:
                 partidas_fecha = (
                     df_fecha.groupby("Jugador", as_index=False)["Partida Ganada"].sum()
@@ -238,7 +240,7 @@ try:
                         f" (con {max_pg} partidas ganadas)."
                     )
 
-    # TAB 5 - Gráficos acumulados (con bonus ya aplicado en 'rank_total')
+    # TAB 5 - Gráficos acumulados
     with tab5:
         st.subheader("📊 Gráficos Acumulados")
 
