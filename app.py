@@ -20,6 +20,40 @@ try:
 
     df['Fecha'] = df['Fecha'].astype(int)
 
+    # --- Bonus por Partida Ganada (solo una vez por fecha) ---
+    if "Partida Ganada" in df.columns:
+        # Total de partidas ganadas por jugador y fecha (sumando los 6 mapas)
+        partidas_por_fecha = (
+            df.groupby(["Fecha", "Jugador"])["Partida Ganada"]
+            .sum()
+            .reset_index()
+        )
+
+        # Identificar máximo de partidas ganadas por fecha
+        max_por_fecha = (
+            partidas_por_fecha.groupby("Fecha")["Partida Ganada"]
+            .transform("max")
+        )
+
+        # Marcar a los jugadores que alcanzaron ese máximo
+        partidas_por_fecha["Es_ganador_fecha"] = partidas_por_fecha["Partida Ganada"] == max_por_fecha
+
+        # Asignar bonus de 600 puntos solo a esos jugadores
+        partidas_por_fecha["Bonus"] = partidas_por_fecha["Es_ganador_fecha"].astype(int) * 600
+
+        # Sumar bonus por jugador en todo el campeonato
+        bonus_por_jugador = partidas_por_fecha.groupby("Jugador")["Bonus"].sum().reset_index()
+
+        # Incorporar bonus al dataframe original
+        df = df.merge(bonus_por_jugador, on="Jugador", how="left")
+        df["Bonus"] = df["Bonus"].fillna(0)
+
+        # Ajustar rendimiento con bonus
+        df["Rendimiento"] = df["Rendimiento"] + df["Bonus"]
+
+    else:
+        df["Bonus"] = 0
+
     # --- Consolidación por jugador ---
     resumen = (
         df.groupby("Jugador")
@@ -27,7 +61,8 @@ try:
             Fechas_jugadas=("Fecha", "nunique"),
             Rendimiento_total=("Rendimiento", "sum"),
             Bajas_total=("Bajas", "sum"),
-            Muertes_total=("Muertes", "sum")
+            Muertes_total=("Muertes", "sum"),
+            Bonus_total=("Bonus", "max")  # se usa max porque el valor ya es total por jugador
         )
         .reset_index()
     )
@@ -70,19 +105,21 @@ try:
 
     # --- KPI’s grandes en top ---
     st.markdown("## 🔑 KPI’s Acumulados")
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     bajas = res_filtrado["Bajas_total"].sum()
     muertes = res_filtrado["Muertes_total"].sum()
     rend = res_filtrado["Rendimiento_total"].sum()
     prom = res_filtrado["Promedio"].mean()
     ratio = res_filtrado["Ratio"].mean()
+    bonus_total = res_filtrado["Bonus_total"].sum()
 
     col1.metric("Bajas", f"{bajas:,}".replace(",", "."))
     col2.metric("Muertes", f"{muertes:,}".replace(",", "."))
     col3.metric("Rendimiento", f"{rend:,}".replace(",", "."))
     col4.metric("Promedio", f"{prom:,.0f}".replace(".", ","))
     col5.metric("Ratio", f"{ratio:,.2f}".replace(".", ","))
+    col6.metric("Bonus", f"{bonus_total:,}".replace(",", "."))
 
     # ------------------ TABS ------------------
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -96,7 +133,12 @@ try:
     # TAB 1 - Ranking
     with tab1:
         st.subheader("🏆 Ranking con Mejor y Peor Mapa (Acumulado)")
-        st.dataframe(rank_total[["Posición","Jugador","Fechas_jugadas","Bajas_total","Muertes_total","Ratio","Rendimiento_total","Promedio","Mapas (Mejor | Peor)"]], use_container_width=True)
+        st.dataframe(
+            rank_total[
+                ["Posición","Jugador","Fechas_jugadas","Bajas_total","Muertes_total","Ratio","Rendimiento_total","Promedio","Bonus_total","Mapas (Mejor | Peor)"]
+            ],
+            use_container_width=True
+        )
 
     # TAB 2 - Rendimiento por Jugador y Mapa
     with tab2:
