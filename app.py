@@ -21,40 +21,10 @@ try:
 
     df['Fecha'] = df['Fecha'].astype(int)
 
-    # =========================
-    # BONUS POR PARTIDA GANADA
-    # =========================
-    if "Partida Ganada" in df.columns:
-        partidas_por_fecha = (
-            df.groupby(["Fecha", "Jugador"], as_index=False)["Partida Ganada"]
-              .sum()
-              .rename(columns={"Partida Ganada": "PG"})
-        )
-
-        # Ajuste: solo un ganador por fecha (rompe empates con el primero encontrado)
-        idx_max = partidas_por_fecha.groupby("Fecha")["PG"].idxmax()
-        partidas_por_fecha["Bonus"] = 0
-        partidas_por_fecha.loc[idx_max, "Bonus"] = 600
-        partidas_por_fecha["Bonus_count"] = (partidas_por_fecha["Bonus"] > 0).astype(int)
-
-        bonus_total_jugador = (
-            partidas_por_fecha.groupby("Jugador", as_index=False)
-              .agg(
-                  Bonus_total=("Bonus", "sum"),
-                  Bonus_count=("Bonus_count", "sum")
-              )
-        )
-    else:
-        bonus_total_jugador = pd.DataFrame({
-            "Jugador": df["Jugador"].unique(),
-            "Bonus_total": 0,
-            "Bonus_count": 0
-        })
-
     # ===============================
     # CONSOLIDACIÓN BASE
     # ===============================
-    resumen_base = (
+    resumen = (
         df.groupby("Jugador", as_index=False)
           .agg(
               Fechas_jugadas=("Fecha", "nunique"),
@@ -64,19 +34,11 @@ try:
           )
     )
 
-    # ===========================
-    # APLICAR BONUS SOLO AL TOTAL
-    # ===========================
-    resumen = resumen_base.merge(bonus_total_jugador, on="Jugador", how="left")
-    resumen["Bonus_total"] = resumen["Bonus_total"].fillna(0)
-    resumen["Bonus_count"] = resumen["Bonus_count"].fillna(0)
-
-    resumen["Rendimiento_total"] = resumen["Rendimiento_total"] + resumen["Bonus_total"]
     resumen["Promedio"] = resumen["Rendimiento_total"] / resumen["Fechas_jugadas"]
     resumen["Ratio"] = resumen["Bajas_total"] / resumen["Muertes_total"]
 
     # ===========================
-    # MEJOR/PEOR MAPA (SIN BONUS)
+    # MEJOR/PEOR MAPA
     # ===========================
     acumulado_mapa = df.groupby(["Jugador", "Mapa"], as_index=False)["Rendimiento"].sum()
     mejor_mapa_acum = (
@@ -117,23 +79,19 @@ try:
 
     # --- KPI’s grandes en top ---
     st.markdown("## 🔑 KPI’s Acumulados")
-    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     bajas = res_filtrado["Bajas_total"].sum()
     muertes = res_filtrado["Muertes_total"].sum()
     rend = res_filtrado["Rendimiento_total"].sum()
     prom = res_filtrado["Promedio"].mean()
     ratio = res_filtrado["Ratio"].mean()
-    bonus_total = res_filtrado["Bonus_total"].sum()
-    bonus_count = res_filtrado["Bonus_count"].sum()
 
     col1.metric("Bajas", f"{bajas:,.0f}".replace(",", "."))
     col2.metric("Muertes", f"{muertes:,.0f}".replace(",", "."))
     col3.metric("Rendimiento", f"{rend:,.0f}".replace(",", "."))
     col4.metric("Promedio", f"{prom:,.0f}".replace(",", "."))
-    col5.metric("Ratio", f"{ratio:,.2f}".replace(",", ","))
-    col6.metric("Bonus", f"{bonus_total:,.0f}".replace(",", "."))
-    col7.metric("Veces con Bonus", f"{bonus_count:,.0f}".replace(",", "."))
+    col5.metric("Ratio", f"{ratio:,.2f}".replace(".", ","))
 
     # ------------------ TABS ------------------
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -150,7 +108,7 @@ try:
         st.dataframe(
             rank_total[
                 ["Posición","Jugador","Fechas_jugadas","Bajas_total","Muertes_total",
-                 "Ratio","Rendimiento_total","Promedio","Bonus_total","Bonus_count","Mapas (Mejor | Peor)"]
+                 "Ratio","Rendimiento_total","Promedio","Mapas (Mejor | Peor)"]
             ],
             use_container_width=True
         )
@@ -191,7 +149,6 @@ try:
         mejor_diff = float("inf")
         mejor_subset = None
 
-        # Buscar la combinación que minimice la diferencia
         for combo in itertools.combinations(jugadores, target_size):
             equipoA = list(combo)
             equipoB = [j for j in jugadores if j not in equipoA]
@@ -218,7 +175,7 @@ try:
 
         st.write(f"⚖️ Diferencia de promedios: {mejor_diff:,.2f}")
 
-    # TAB 4 - Estadísticas por Jugador y Fecha (incluye ganadores del bonus)
+    # TAB 4 - Estadísticas por Jugador y Fecha
     with tab4:
         st.subheader("🌍 Estadísticas por Jugador y Fecha")
 
@@ -235,23 +192,6 @@ try:
             col3.metric("Rendimiento", f"{df_fecha['Rendimiento'].sum():,}".replace(",", "."))
 
             st.dataframe(df_fecha, use_container_width=True)
-
-            # Ganadores del bonus en esa fecha
-            if "Partida Ganada" in df.columns:
-                partidas_fecha = (
-                    df_fecha.groupby("Jugador", as_index=False)["Partida Ganada"].sum()
-                              .rename(columns={"Partida Ganada": "PG"})
-                )
-                max_pg = partidas_fecha["PG"].max()
-                ganadores = partidas_fecha[partidas_fecha["PG"] == max_pg]["Jugador"].tolist()
-
-                if len(ganadores) > 0:
-                    st.markdown("### 🏅 Ganadores del Bonus")
-                    st.write(
-                        f"En la **Fecha {selected_fecha}**, el bonus de **600 puntos** fue entregado a: " +
-                        ", ".join(ganadores) +
-                        f" (con {max_pg} partidas ganadas)."
-                    )
 
     # TAB 5 - Gráficos acumulados
     with tab5:
