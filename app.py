@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+import itertools
 
 st.set_page_config(page_title="Ranking Campeonato", layout="wide")
 
@@ -30,11 +31,11 @@ try:
               .rename(columns={"Partida Ganada": "PG"})
         )
 
-        partidas_por_fecha["PG_max_fecha"] = partidas_por_fecha.groupby("Fecha")["PG"].transform("max")
-        partidas_por_fecha["Es_ganador_fecha"] = (partidas_por_fecha["PG"] == partidas_por_fecha["PG_max_fecha"])
-
-        partidas_por_fecha["Bonus"] = partidas_por_fecha["Es_ganador_fecha"].astype(int) * 600
-        partidas_por_fecha["Bonus_count"] = partidas_por_fecha["Es_ganador_fecha"].astype(int)
+        # Ajuste: solo un ganador por fecha (rompe empates con el primero encontrado)
+        idx_max = partidas_por_fecha.groupby("Fecha")["PG"].idxmax()
+        partidas_por_fecha["Bonus"] = 0
+        partidas_por_fecha.loc[idx_max, "Bonus"] = 600
+        partidas_por_fecha["Bonus_count"] = (partidas_por_fecha["Bonus"] > 0).astype(int)
 
         bonus_total_jugador = (
             partidas_por_fecha.groupby("Jugador", as_index=False)
@@ -126,13 +127,13 @@ try:
     bonus_total = res_filtrado["Bonus_total"].sum()
     bonus_count = res_filtrado["Bonus_count"].sum()
 
-    col1.metric("Bajas", f"{bajas:,}".replace(",", "."))
-    col2.metric("Muertes", f"{muertes:,}".replace(",", "."))
-    col3.metric("Rendimiento", f"{rend:,}".replace(",", "."))
-    col4.metric("Promedio", f"{prom:,.0f}".replace(".", ","))
-    col5.metric("Ratio", f"{ratio:,.2f}".replace(".", ","))
-    col6.metric("Bonus", f"{bonus_total:,}".replace(",", "."))
-    col7.metric("Veces con Bonus", f"{bonus_count:,}".replace(",", "."))
+    col1.metric("Bajas", f"{bajas:,.0f}".replace(",", "."))
+    col2.metric("Muertes", f"{muertes:,.0f}".replace(",", "."))
+    col3.metric("Rendimiento", f"{rend:,.0f}".replace(",", "."))
+    col4.metric("Promedio", f"{prom:,.0f}".replace(",", "."))
+    col5.metric("Ratio", f"{ratio:,.2f}".replace(",", ","))
+    col6.metric("Bonus", f"{bonus_total:,.0f}".replace(",", "."))
+    col7.metric("Veces con Bonus", f"{bonus_count:,.0f}".replace(",", "."))
 
     # ------------------ TABS ------------------
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -179,21 +180,31 @@ try:
 
         st.dataframe(tabla_final, use_container_width=True)
 
-    # TAB 3 - Balance de equipos
+    # TAB 3 - Balance de equipos (mejorado con knapsack)
     with tab3:
-        st.subheader("⚖️ Equipos Balanceados (por promedio)")
+        st.subheader("⚖️ Equipos Balanceados (Optimización tipo knapsack)")
 
-        equipoA, equipoB = [], []
-        promA, promB = 0, 0
-        rank_prom = resumen.sort_values("Promedio", ascending=False).reset_index(drop=True)
+        jugadores = resumen[["Jugador", "Promedio"]].to_dict("records")
+        n = len(jugadores)
+        target_size = n // 2  # tamaño ideal de cada equipo
 
-        for i, row in rank_prom.iterrows():
-            if i % 2 == 0:
-                equipoA.append(row)
-                promA += row["Promedio"]
-            else:
-                equipoB.append(row)
-                promB += row["Promedio"]
+        mejor_diff = float("inf")
+        mejor_subset = None
+
+        # Buscar la combinación que minimice la diferencia
+        for combo in itertools.combinations(jugadores, target_size):
+            equipoA = list(combo)
+            equipoB = [j for j in jugadores if j not in equipoA]
+
+            promA = sum(j["Promedio"] for j in equipoA)
+            promB = sum(j["Promedio"] for j in equipoB)
+            diff = abs(promA - promB)
+
+            if diff < mejor_diff:
+                mejor_diff = diff
+                mejor_subset = (equipoA, equipoB, promA, promB)
+
+        equipoA, equipoB, promA, promB = mejor_subset
 
         dfA = pd.DataFrame(equipoA)[["Jugador", "Promedio"]]
         dfB = pd.DataFrame(equipoB)[["Jugador", "Promedio"]]
@@ -204,6 +215,8 @@ try:
 
         col1.dataframe(dfA, use_container_width=True)
         col2.dataframe(dfB, use_container_width=True)
+
+        st.write(f"⚖️ Diferencia de promedios: {mejor_diff:,.2f}")
 
     # TAB 4 - Estadísticas por Jugador y Fecha (incluye ganadores del bonus)
     with tab4:
